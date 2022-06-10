@@ -6,11 +6,10 @@ import (
 	"log"
 
 	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/service/s3"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-func Reply(ctx context.Context, requestBody, s3BucketId, languageCode, tokenParameterName string) {
+func Reply(ctx context.Context, fileReader FileReader, requestBody, languageCode string, tokenParameterName string) {
 	var update tgbotapi.Update
 	err := json.Unmarshal([]byte(requestBody), &update)
 	if err != nil {
@@ -23,15 +22,11 @@ func Reply(ctx context.Context, requestBody, s3BucketId, languageCode, tokenPara
 		return
 	}
 
-	log.Printf("s3BucketId = %s\n", s3BucketId)
-	s3Client := s3.NewFromConfig(cfg)
-
 	if update.Message != nil { // If we got a message
 		thisChat, err := BotSendPoll(
 			ctx,
 			cfg,
-			s3Client,
-			s3BucketId,
+			fileReader,
 			languageCode,
 			update.Message.Chat.ID,
 			tokenParameterName,
@@ -42,11 +37,11 @@ func Reply(ctx context.Context, requestBody, s3BucketId, languageCode, tokenPara
 		}
 
 		if thisChat == nil {
-			PutChat(ctx, s3Client, s3BucketId, update.Message.Chat.ID, thisChat)
+			PutChat(update.Message.Chat.ID, thisChat)
 		}
 
 	} else if update.Poll != nil {
-		poll, err := GetPoll(ctx, s3Client, s3BucketId, update.Poll.ID)
+		poll, err := GetPoll(update.Poll.ID)
 		if err != nil {
 			log.Printf("Error while retrieving poll: %s", err)
 			return
@@ -55,8 +50,7 @@ func Reply(ctx context.Context, requestBody, s3BucketId, languageCode, tokenPara
 		thisChat, err := BotSendPoll(
 			ctx,
 			cfg,
-			s3Client,
-			s3BucketId,
+			fileReader,
 			languageCode,
 			poll.ChatID,
 			tokenParameterName,
@@ -88,6 +82,6 @@ func Reply(ctx context.Context, requestBody, s3BucketId, languageCode, tokenPara
 			}
 			language.RightAnswers[poll.WordId] = true
 		}
-		PutChat(ctx, s3Client, s3BucketId, poll.ChatID, thisChat)
+		PutChat(poll.ChatID, thisChat)
 	}
 }

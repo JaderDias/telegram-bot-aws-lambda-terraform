@@ -1,5 +1,5 @@
 # telegram-bot-aws-lambda-terraform
-Telegram bot hosted in Amazon Web Services using Lambda, S3, SSM
+Telegram bot hosted in Amazon Web Services using Lambda, EFS, SSM
 
 ## Prerequisites
 

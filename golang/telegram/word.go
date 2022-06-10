@@ -1,19 +1,18 @@
 package telegram
 
 import (
-	"context"
 	"fmt"
 	"log"
 	"math/rand"
 	"strings"
-
-	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
+type FileReader interface {
+	ReadFile(string) ([]byte, error)
+}
+
 func GetWords(
-	ctx context.Context,
-	s3Client *s3.Client,
-	s3BucketId string,
+	fileReader FileReader,
 	language string,
 	batchId int,
 ) ([]string, int, error) {
@@ -22,8 +21,8 @@ func GetWords(
 		log.Printf("random batchId: %d", batchId)
 	}
 
-	key := fmt.Sprintf("language/%s/%d", language, batchId)
-	content, err := GetObject(ctx, s3Client, s3BucketId, key)
+	key := fmt.Sprintf("/mnt/efs/language/%s/%d", language, batchId)
+	content, err := fileReader.ReadFile(key)
 	if err != nil {
 		return nil, 0, err
 	}

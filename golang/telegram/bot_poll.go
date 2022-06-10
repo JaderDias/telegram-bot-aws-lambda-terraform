@@ -7,7 +7,6 @@ import (
 	"math/rand"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/service/s3"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
@@ -71,8 +70,7 @@ func extractWordId(answers map[int]bool) int {
 func BotSendPoll(
 	ctx context.Context,
 	cfg aws.Config,
-	s3Client *s3.Client,
-	s3BucketId string,
+	fileReader FileReader,
 	languageCode string,
 	chatID int64,
 	tokenParameterName string,
@@ -80,7 +78,7 @@ func BotSendPoll(
 	batchId := -1
 	correctWordId := -1
 	correctLineNumber := -1
-	thisChat, err := GetChat(ctx, s3Client, s3BucketId, chatID)
+	thisChat, err := GetChat(chatID)
 	if err == nil {
 		if language, ok := thisChat.Languages[languageCode]; ok {
 			if len(language.WrongAnswers) > 0 {
@@ -96,7 +94,7 @@ func BotSendPoll(
 		batchId = int(correctWordId / 100)
 		correctLineNumber = correctWordId % 100
 	}
-	dictionary, batchId, err := GetWords(ctx, s3Client, s3BucketId, languageCode, batchId)
+	dictionary, batchId, err := GetWords(fileReader, languageCode, batchId)
 	if err != nil {
 		log.Printf("Error while getting words: %s", err)
 		return thisChat, err
@@ -126,16 +124,12 @@ func BotSendPoll(
 	}
 
 	err = PutPoll(
-		ctx,
-		s3Client,
-		s3BucketId,
 		poll.Poll.ID,
 		&Poll{
 			ChatID:   chatID,
 			WordId:   (batchId * 100) + correctLineNumber,
 			Language: languageCode,
 		},
-		&RealClock{},
 	)
 	if err != nil {
 		log.Printf("Error while saving poll: %s", err)

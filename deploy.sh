@@ -15,8 +15,8 @@ fi
 
 echo -e "\n+++++ Starting deployment +++++\n"
 
-NL_DICT="golang/upload/nl.csv"
-SH_DICT="golang/upload/sh.csv"
+NL_DICT="nl.csv"
+SH_DICT="sh.csv"
 
 if [ ! -f "$NL_DICT" ] ||  [ ! -f "$SH_DICT" ]; then
     DUMP_XML_BZ2="enwiktionary-latest-pages-articles-multistream.xml.bz2"
@@ -57,6 +57,11 @@ then
     echo "build upload packages failed"
     exit 1
 fi
+
+cd ../upload
+go get
+go test ./...
+env GOOS=linux GOARCH=amd64 go build -o ../../bin/upload/upload
 
 echo "+++++ apply terraform +++++"
 cd ../../terraform

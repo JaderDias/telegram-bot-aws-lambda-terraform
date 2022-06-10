@@ -1,9 +1,9 @@
 package telegram
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 )
 
 type Language struct {
@@ -19,42 +19,28 @@ type Chat struct {
 }
 
 func PutChat(
-	ctx context.Context,
-	s3Client S3Client,
-	s3BucketId string,
 	chatId int64,
 	chat *Chat,
 ) error {
 	if chat == nil {
 		return fmt.Errorf("chat is nil")
 	}
-	key := fmt.Sprintf("chat/%d", chatId)
+	key := fmt.Sprintf("/mnt/efs/chat/%d", chatId)
 	data, err := json.Marshal(chat)
 	if err != nil {
 		return err
 	}
-	return PutObject(
-		ctx,
-		s3Client,
-		s3BucketId,
-		key,
-		data,
-		nil,
-	)
+	return os.WriteFile(key, data, 0644)
 }
 
 func GetChat(
-	ctx context.Context,
-	s3Client S3Client,
-	s3BucketId string,
 	chatId int64,
 ) (*Chat, error) {
-	key := fmt.Sprintf("chat/%d", chatId)
-	content, err := GetObject(ctx, s3Client, s3BucketId, key)
+	key := fmt.Sprintf("/mnt/efs/chat/%d", chatId)
+	content, err := os.ReadFile(key)
 	if err != nil {
 		return nil, err
 	}
-
 	var value Chat
 	err = json.Unmarshal(content, &value)
 	if err != nil {

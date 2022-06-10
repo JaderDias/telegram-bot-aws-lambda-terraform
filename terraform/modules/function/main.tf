@@ -15,29 +15,29 @@ resource "aws_lambda_function" "myfunc" {
   environment {
     variables = {
       language             = var.language
-      s3_bucket_id         = var.s3_bucket_id
       token_parameter_name = var.ssm_parameter_name
+      LOCAL_MOUNT_PATH     = var.local_mount_path
     }
   }
   tags = {
     environment = terraform.workspace
   }
-}
 
-resource "aws_lambda_function_url" "url1" {
-  function_name      = aws_lambda_function.myfunc.function_name
-  qualifier          = ""
-  authorization_type = "NONE"
-
-  cors {
-    allow_credentials = true
-    allow_origins     = ["*"]
-    allow_methods     = ["POST"]
-    allow_headers     = ["date", "keep-alive"]
-    expose_headers    = ["keep-alive", "date"]
-    max_age           = 86400
+  vpc_config {
+    subnet_ids         = var.subnet_ids
+    security_group_ids = var.security_groups
   }
+
+
+  file_system_config {
+    arn              = var.efs_access_point_arn
+    local_mount_path = var.local_mount_path
+  }
+
+  # Explicitly declare dependency on EFS mount target.
+  # When creating or updating Lambda functions, mount target must be in 'available' lifecycle state.
   depends_on = [
-    aws_lambda_function.myfunc
+    var.efs_mount_targets,
+    data.archive_file.lambda_zip
   ]
 }

@@ -9,22 +9,25 @@ import (
 	"os"
 	"strings"
 
-	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-lambda-go/lambda"
 )
+
+type MyEvent struct {
+	Name string `json:"name"`
+}
 
 const (
 	batchLines = 100
 )
 
-func uploadFile(
-	ctx context.Context,
-	s3Client *s3.Client,
-	s3BucketId string,
-	fileName string,
-) {
+func uploadFile(fileName string) {
 	language := strings.TrimSuffix(fileName, ".csv")
 	log.Printf("uploading %s", language)
+	languagePath := fmt.Sprintf("/mnt/efs/language/%s", language)
+	err := os.MkdirAll(languagePath, os.ModePerm)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	inFile, err := os.Open(fileName)
 	if err != nil {
@@ -35,28 +38,32 @@ func uploadFile(
 	scanner := bufio.NewScanner(inFile)
 
 	batchId := 0
-	lines := make([]string, batchLines)
-	lineIndex := 0
+	lineCount := 0
+	fileName = fmt.Sprintf("%s/%d", languagePath, batchId)
+	log.Printf("creating %s", fileName)
+	outFile, err := os.Create(fileName)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	defer outFile.Close()
+	datawriter := bufio.NewWriter(outFile)
 
 	for scanner.Scan() {
-		lines[lineIndex] = scanner.Text()
-		lineIndex++
-		if lineIndex == batchLines {
-			key := fmt.Sprintf("language/%s/%d", language, batchId)
-			log.Printf("creating %s", key)
-			_, err := s3Client.PutObject(
-				ctx,
-				&s3.PutObjectInput{
-					Bucket: &s3BucketId,
-					Key:    &key,
-					Body:   strings.NewReader(strings.Join(lines, "\n")),
-				},
-			)
+		datawriter.WriteString(scanner.Text())
+		datawriter.WriteString("\n")
+		lineCount++
+		if lineCount%batchLines == 0 {
+			datawriter.Flush()
+			outFile.Close()
+			batchId++
+			fileName = fmt.Sprintf("%s/%d", languagePath, batchId)
+			log.Printf("creating %s", fileName)
+			outFile, err = os.Create(fileName)
 			if err != nil {
 				log.Fatal(err)
 			}
-			batchId++
-			lineIndex = 0
+			datawriter = bufio.NewWriter(outFile)
 		}
 	}
 
@@ -66,22 +73,17 @@ func uploadFile(
 
 }
 
-func main() {
-	if len(os.Args) < 2 {
-		log.Panic("missing argument: <s3BucketId>")
-	}
-
-	s3BucketId := os.Args[1]
-
-	ctx := context.Background()
-
-	cfg, err := config.LoadDefaultConfig(ctx)
+func HandleRequest(ctx context.Context, name MyEvent) (string, error) {
+	err := os.MkdirAll("/mnt/efs/poll", os.ModePerm)
 	if err != nil {
-		log.Printf("unable to load SDK config, %v", err)
-		return
+		log.Fatal(err)
 	}
 
-	s3Client := s3.NewFromConfig(cfg)
+	err = os.MkdirAll("/mnt/efs/chat", os.ModePerm)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	files, err := ioutil.ReadDir("./")
 	if err != nil {
 		log.Fatal(err)
@@ -89,7 +91,13 @@ func main() {
 
 	for _, file := range files {
 		if strings.HasSuffix(file.Name(), ".csv") {
-			uploadFile(ctx, s3Client, s3BucketId, file.Name())
+			uploadFile(file.Name())
 		}
 	}
+
+	return fmt.Sprintf("Hello %s!", name.Name), nil
+}
+
+func main() {
+	lambda.Start(HandleRequest)
 }

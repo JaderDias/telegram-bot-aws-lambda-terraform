@@ -15,49 +15,58 @@ resource "random_pet" "this" {
   length = 2
 }
 
-resource "aws_ssm_parameter" "telegram_bot_tokens" {
-  name  = "${terraform.workspace}_telegram_bot_tokens"
-  type  = "SecureString"
-  value = var.telegram_bot_tokens
-  tags = {
-    environment = terraform.workspace,
-    deployment  = random_pet.this.id,
-  }
+module "vpc" {
+  source = "./modules/vpc"
+
+  name                 = "${terraform.workspace}-${var.name}-vpc"
+  vpc_cidr             = "10.0.0.0/16"
+  azs                  = var.availability_zones
+  public_subnet_cidrs  = ["10.0.96.0/20", "10.0.112.0/20", "10.0.128.0/20"]
+  private_subnet_cidrs = ["10.0.0.0/20", "10.0.16.0/20", "10.0.32.0/20"]
 }
 
-resource "aws_s3_bucket" "bucket" {
-  bucket = "${terraform.workspace}-telegram-bot-${random_pet.this.id}"
-  tags = {
-    environment = terraform.workspace
-  }
+module "efs" {
+  source = "./modules/efs"
+
+  name                   = "${terraform.workspace}-${var.name}-efs"
+  subnet_ids             = module.vpc.private_subnetes
+  security_group_ids     = [module.vpc.sg_for_lambda.id]
+  provisioned_throughput = var.efs_provisioned_throughput
+  throughput_mode        = var.efs_throughput_mode
 }
 
-resource "aws_s3_bucket_acl" "bucket_acl" {
-  bucket = aws_s3_bucket.bucket.id
-  acl    = "private"
+module "upload_function" {
+  source = "./modules/function"
+
+  function_name     = "${terraform.workspace}_upload_${random_pet.this.id}"
+  lambda_handler    = "upload"
+  source_dir        = "../bin/upload"
+  subnet_ids        = module.vpc.private_subnetes
+  security_groups   = [module.vpc.sg_for_lambda.id]
+  ssm_parameter_arn = aws_ssm_parameter.telegram_bot_tokens.arn
+  ssm_key_arn       = aws_kms_key.aws_ssm_key.arn
+
+  efs_access_point_arn = module.efs.access_point_arn
+  efs_mount_targets    = module.efs.mount_targets
 }
 
-resource "null_resource" "upload_language" {
+resource "aws_lambda_invocation" "upload" {
+  function_name = module.upload_function.function_name
+  input         = ""
   triggers = {
-    aws_s3_bucket = aws_s3_bucket.bucket.id
-    nl_update     = filesha1("../nl.csv"),
-    sh_update     = filesha1("../sh.csv")
+    nl_update = filesha1("../nl.csv"),
+    sh_update = filesha1("../sh.csv")
   }
-  provisioner "local-exec" {
-    working_dir = "../golang/upload"
-    command     = format("go run . '%s'", aws_s3_bucket.bucket.id)
-    interpreter = ["bash", "-c"]
-  }
+  depends_on = [
+    module.upload_function,
+  ]
 }
 
-#module "send_message_function" {
-#  source = "./modules/function"
-
-#  function_name       = "send_message_function-${random_pet.this.id}"
-#  lambda_handler      = "send_message"
-#  source_dir          = "../bin/send_message"
-#  schedule_expression = "rate(60 minutes)"
-#}
+data "archive_file" "lambda_zip" {
+  type        = "zip"
+  source_dir  = "../bin/reply"
+  output_path = "../bin/reply.zip"
+}
 
 module "reply_function" {
   for_each = jsondecode(nonsensitive(var.telegram_bot_tokens))
@@ -67,10 +76,19 @@ module "reply_function" {
   lambda_handler     = "reply"
   language           = each.key
   source_dir         = "../bin/reply"
-  s3_bucket_arn      = aws_s3_bucket.bucket.arn
-  s3_bucket_id       = aws_s3_bucket.bucket.id
+  subnet_ids         = module.vpc.private_subnetes
+  security_groups    = [module.vpc.sg_for_lambda.id]
   ssm_parameter_arn  = aws_ssm_parameter.telegram_bot_tokens.arn
   ssm_parameter_name = aws_ssm_parameter.telegram_bot_tokens.name
+  ssm_key_arn        = aws_kms_key.aws_ssm_key.arn
+
+  efs_access_point_arn   = module.efs.access_point_arn
+  efs_mount_targets      = module.efs.mount_targets
+  url_authorization_type = "NONE"
+  depends_on = [
+    aws_lambda_invocation.upload,
+    data.archive_file.lambda_zip
+  ]
 }
 
 resource "null_resource" "register_webhook" {

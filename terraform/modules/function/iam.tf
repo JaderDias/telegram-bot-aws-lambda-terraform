@@ -1,7 +1,3 @@
-data "aws_kms_alias" "aws_ssm_key" {
-  name = "alias/aws/ssm"
-}
-
 data "aws_iam_policy_document" "lambda_exec_role_policy" {
   statement {
     actions = [
@@ -16,7 +12,7 @@ data "aws_iam_policy_document" "lambda_exec_role_policy" {
       "kms:Decrypt",
     ]
     resources = [
-      data.aws_kms_alias.aws_ssm_key.arn
+      var.ssm_key_arn
     ]
   }
   statement {
@@ -27,17 +23,6 @@ data "aws_iam_policy_document" "lambda_exec_role_policy" {
     ]
     effect    = "Allow"
     resources = ["arn:aws:logs:*:*:*"]
-  }
-  statement {
-    actions = [
-      "s3:GetObject",
-      "s3:PutObject",
-    ]
-    effect = "Allow"
-    resources = [
-      "${var.s3_bucket_arn}/*",
-      var.s3_bucket_arn,
-    ]
   }
 }
 
@@ -77,4 +62,24 @@ resource "aws_iam_role" "iam_for_terraform_lambda" {
 resource "aws_iam_role_policy_attachment" "terraform_lambda_iam_policy_basic_execution" {
   role       = aws_iam_role.iam_for_terraform_lambda.id
   policy_arn = aws_iam_policy.lambda_policy.arn
+}
+
+data "aws_partition" "current" {}
+
+data "aws_iam_policy" "AmazonElasticFileSystemClientFullAccess" {
+  arn = "arn:${data.aws_partition.current.partition}:iam::aws:policy/AmazonElasticFileSystemClientFullAccess"
+}
+
+data "aws_iam_policy" "AWSLambdaVPCAccessExecutionRole" {
+  arn = "arn:${data.aws_partition.current.partition}:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+}
+
+resource "aws_iam_role_policy_attachment" "AmazonElasticFileSystemClientFullAccess-attach" {
+  role       = aws_iam_role.iam_for_terraform_lambda.id
+  policy_arn = data.aws_iam_policy.AmazonElasticFileSystemClientFullAccess.arn
+}
+
+resource "aws_iam_role_policy_attachment" "AWSLambdaVPCAccessExecutionRole-attach" {
+  role       = aws_iam_role.iam_for_terraform_lambda.id
+  policy_arn = data.aws_iam_policy.AWSLambdaVPCAccessExecutionRole.arn
 }

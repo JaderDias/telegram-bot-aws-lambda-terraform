@@ -1,9 +1,9 @@
 package telegram
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"time"
 )
 
@@ -26,12 +26,8 @@ type MockClock struct{}
 func (*MockClock) Now() time.Time { return time.Unix(1654822800, 0) }
 
 func PutPoll(
-	ctx context.Context,
-	s3Client S3Client,
-	s3BucketId string,
 	pollId string,
 	poll *Poll,
-	clock Clock,
 ) error {
 	if poll == nil {
 		return fmt.Errorf("poll is nil")
@@ -45,30 +41,19 @@ func PutPoll(
 	if poll.Language == "" {
 		return fmt.Errorf("poll.Language is empty")
 	}
-	key := fmt.Sprintf("poll/%s", pollId)
+	key := fmt.Sprintf("/mnt/efs/poll/%s", pollId)
 	data, err := json.Marshal(poll)
 	if err != nil {
 		return err
 	}
-	expires := clock.Now().Add(time.Hour * 24 * 30) // 30 days
-	return PutObject(
-		ctx,
-		s3Client,
-		s3BucketId,
-		key,
-		data,
-		&expires,
-	)
+	return os.WriteFile(key, data, 0644)
 }
 
 func GetPoll(
-	ctx context.Context,
-	s3Client S3Client,
-	s3BucketId string,
 	pollId string,
 ) (*Poll, error) {
-	key := fmt.Sprintf("poll/%s", pollId)
-	content, err := GetObject(ctx, s3Client, s3BucketId, key)
+	key := fmt.Sprintf("/mnt/efs/poll/%s", pollId)
+	content, err := os.ReadFile(key)
 	if err != nil {
 		return nil, err
 	}
