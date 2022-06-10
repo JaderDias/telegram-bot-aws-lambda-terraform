@@ -15,6 +15,7 @@ import (
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -23,10 +24,10 @@ var (
 	HTTPMethodNotSupported = errors.New("HTTP method not supported")
 )
 
-func loadDictionary() []string {
+func loadDictionary() ([]string, error) {
 	file, err := os.Open("sh.csv")
 	if err != nil {
-		log.Fatal(err)
+		return nil, fmt.Errorf("Error while opening file: %s", err)
 	}
 	defer file.Close()
 
@@ -36,9 +37,9 @@ func loadDictionary() []string {
 		words = append(words, scanner.Text())
 	}
 	if err := scanner.Err(); err != nil {
-		log.Fatal(err)
+		return nil, fmt.Errorf("Error while reading file: %s", err)
 	}
-	return words
+	return words, nil
 }
 
 var titleMatcher = regexp.MustCompile(`^([^=]+)(=.*)$`)
@@ -146,6 +147,9 @@ type chat struct {
 }
 
 func sendPoll(
+	ctx context.Context,
+	s3Client *s3.Client,
+	s3BucketId string,
 	dictionary []string,
 	bot *tgbotapi.BotAPI,
 	chatID int64,
@@ -156,30 +160,39 @@ func sendPoll(
 		ChatID: chatID,
 	}
 
-	_, err := bot.Send(sendPollConfig)
+	poll, err := bot.Send(sendPollConfig)
 	if err != nil {
 		log.Printf("Error while sending poll: %s", err)
 		return
 	}
+
+	err = PutPoll(
+		ctx,
+		s3Client,
+		s3BucketId,
+		poll.Poll.ID,
+		&Poll{
+			ChatID:         chatID,
+			WordLineNumber: correctLineNumber,
+			Language:       "sh",
+		},
+	)
+	if err != nil {
+		log.Printf("Error while saving poll: %s", err)
+	}
 }
 
-func HandleRequest(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	fmt.Printf("Body size = %d. \n", len(request.Body))
-	fmt.Printf("Body = %s. \n", request.Body)
-	fmt.Println("Headers:")
-	for key, value := range request.Headers {
-		fmt.Printf("  %s: %s\n", key, value)
-	}
-
+func Reply(ctx context.Context, requestBody string) {
 	var update tgbotapi.Update
-	err := json.Unmarshal([]byte(request.Body), &update)
+	err := json.Unmarshal([]byte(requestBody), &update)
 	if err != nil {
 		log.Println(err)
 	}
 
 	cfg, err := config.LoadDefaultConfig(ctx)
 	if err != nil {
-		log.Fatalf("unable to load SDK config, %v", err)
+		log.Printf("unable to load SDK config, %v", err)
+		return
 	}
 
 	// Using the Config value, create the DynamoDB client
@@ -191,25 +204,51 @@ func HandleRequest(ctx context.Context, request events.APIGatewayProxyRequest) (
 		WithDecryption: true,
 	})
 	if err != nil {
-		log.Fatalf("unable to get telegram bot token, %v", err)
+		log.Printf("unable to get telegram bot token, %v", err)
+		return
 	}
 
 	bot, err := tgbotapi.NewBotAPI(*parameterOutput.Parameter.Value)
 	if err != nil {
-		log.Panic(err)
-	}
-
-	bot.Debug = true
-	dictionary := loadDictionary()
-
-	if update.Message != nil { // If we got a message
-		log.Printf("[%s] %s", update.Message.From.UserName, update.Message.Text)
-		sendPoll(dictionary, bot, update.Message.Chat.ID)
+		log.Printf("Error while creating bot: %s", err)
 
 	}
 
 	log.Printf("Authorized on account %s", bot.Self.UserName)
+	bot.Debug = true
 
+	s3BucketId := os.Getenv("s3_bucket_id")
+	log.Printf("s3BucketId = %s\n", s3BucketId)
+	s3Client := s3.NewFromConfig(cfg)
+	dictionary, err := loadDictionary()
+	if err != nil {
+		log.Printf("Error while loading dictionary: %s", err)
+		return
+	}
+
+	if update.Message != nil { // If we got a message
+		log.Printf("[%s] %s", update.Message.From.UserName, update.Message.Text)
+		sendPoll(ctx, s3Client, s3BucketId, dictionary, bot, update.Message.Chat.ID)
+
+	} else if update.Poll != nil {
+		poll, err := GetPoll(ctx, s3Client, s3BucketId, update.Poll.ID)
+		if err != nil {
+			log.Printf("Error while retrieving poll: %s", err)
+		}
+
+		sendPoll(ctx, s3Client, s3BucketId, dictionary, bot, poll.ChatID)
+	}
+}
+
+func HandleRequest(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+	log.Printf("Body size = %d. \n", len(request.Body))
+	log.Printf("Body = %s. \n", request.Body)
+	log.Println("Headers:")
+	for key, value := range request.Headers {
+		log.Printf("  %s: %s\n", key, value)
+	}
+
+	Reply(ctx, request.Body)
 	return events.APIGatewayProxyResponse{Body: "POST", StatusCode: 200}, nil
 }
 

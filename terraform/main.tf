@@ -21,6 +21,15 @@ resource "aws_ssm_parameter" "telegram_bot_token" {
   value = var.telegram_bot_token
 }
 
+resource "aws_s3_bucket" "bucket" {
+  bucket = "my-bucket-${random_pet.this.id}"
+}
+
+resource "aws_s3_bucket_acl" "bucket_acl" {
+  bucket = aws_s3_bucket.bucket.id
+  acl    = "private"
+}
+
 #module "send_message_function" {
 #  source = "./modules/function"
 
@@ -33,11 +42,14 @@ resource "aws_ssm_parameter" "telegram_bot_token" {
 module "reply_function" {
   source = "./modules/function"
 
+  aws_ssm_parameter_arn = aws_ssm_parameter.telegram_bot_token.arn
   function_name         = "reply_function-${random_pet.this.id}"
   lambda_handler        = "reply"
   source_dir            = "../bin/reply"
-  aws_ssm_parameter_arn = aws_ssm_parameter.telegram_bot_token.arn
+  s3_bucket_arn         = aws_s3_bucket.bucket.arn
+  s3_bucket_id          = aws_s3_bucket.bucket.id
 }
+
 
 resource "null_resource" "register_webhook" {
   triggers = {

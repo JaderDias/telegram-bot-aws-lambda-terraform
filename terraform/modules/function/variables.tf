@@ -5,10 +5,16 @@ variable "aws_ssm_parameter_arn" {
 variable "function_name" {
   type = string
 }
+variable "lambda_handler" {
+  type = string
+}
 variable "source_dir" {
   type = string
 }
-variable "lambda_handler" {
+variable "s3_bucket_arn" {
+  type = string
+}
+variable "s3_bucket_id" {
   type = string
 }
 variable "schedule_expression" {

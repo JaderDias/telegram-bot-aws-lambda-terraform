@@ -35,6 +35,17 @@ data "aws_iam_policy_document" "lambda_exec_role_policy" {
     effect    = "Allow"
     resources = ["arn:aws:logs:*:*:*"]
   }
+  statement {
+    actions = [
+      "s3:GetObject",
+      "s3:PutObject",
+    ]
+    effect    = "Allow"
+    resources = [
+      "${var.s3_bucket_arn}/*",
+      var.s3_bucket_arn,
+    ]
+  }
 }
 
 # Lambda function policy
@@ -79,9 +90,11 @@ resource "aws_lambda_function" "myfunc" {
   source_code_hash = filebase64sha256(data.archive_file.lambda_zip.output_path)
   runtime          = "go1.x"
   timeout          = 30
-  depends_on = [
-    data.archive_file.lambda_zip
-  ]
+  environment {
+    variables = {
+      s3_bucket_id = var.s3_bucket_id
+    }
+  }
 }
 
 resource "aws_lambda_function_url" "url1" {
