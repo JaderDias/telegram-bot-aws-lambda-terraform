@@ -1,13 +1,10 @@
-module example.com/reply
+module example.com/main
 
 go 1.18
 
 replace example.com/telegram => ../telegram
 
-require (
-	example.com/telegram v0.0.0-00010101000000-000000000000
-	github.com/aws/aws-lambda-go v1.32.0
-)
+require example.com/telegram v0.0.0-00010101000000-000000000000
 
 require (
 	github.com/aws/aws-sdk-go-v2 v1.16.5 // indirect
