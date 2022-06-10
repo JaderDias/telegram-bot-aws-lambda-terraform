@@ -41,23 +41,24 @@ resource "aws_iam_policy" "lambda_policy" {
   policy = data.aws_iam_policy_document.lambda_exec_role_policy.json
 }
 
+data "aws_iam_policy_document" "assume_role_policy" {
+  version = "2012-10-17"
+  statement {
+    actions = [
+      "sts:AssumeRole",
+    ]
+    principals {
+      type        = "Service"
+      identifiers = ["lambda.amazonaws.com"]
+    }
+    effect = "Allow"
+  }
+}
+
 # Lambda function role
 resource "aws_iam_role" "iam_for_terraform_lambda" {
   name               = "${var.function_name}-lambda-role"
-  assume_role_policy = <<EOF
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Action": "sts:AssumeRole",
-      "Principal": {
-        "Service": "lambda.amazonaws.com"
-      },
-      "Effect": "Allow"
-    }
-  ]
-}
-EOF
+  assume_role_policy = data.aws_iam_policy_document.assume_role_policy.json
 }
 
 # Role to Policy attachment
