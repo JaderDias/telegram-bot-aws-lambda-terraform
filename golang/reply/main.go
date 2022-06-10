@@ -11,6 +11,7 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
@@ -175,6 +176,7 @@ func sendPoll(
 			ChatID:         chatID,
 			WordLineNumber: correctLineNumber,
 			Language:       "sh",
+			CreateEpoch:    time.Now().Unix(),
 		},
 	)
 	if err != nil {
