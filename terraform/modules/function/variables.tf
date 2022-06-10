@@ -1,11 +1,15 @@
-variable "bucket_arn" {
+variable "aws_ssm_key_arn" {
+  type    = string
+  default = null
+}
+variable "aws_ssm_parameter_arn" {
   type    = string
   default = null
 }
 variable "function_name" {
   type = string
 }
-variable "source_file" {
+variable "source_dir" {
   type = string
 }
 variable "lambda_handler" {
@@ -14,12 +18,4 @@ variable "lambda_handler" {
 variable "schedule_expression" {
   type    = string
   default = null
-}
-variable "secret_arn" {
-  type    = string
-  default = null
-}
-variable "create_url" {
-  type    = bool
-  default = false
 }

@@ -1,3 +1,6 @@
+# Data files
+*.csv
+
 # Compressed files
 *.zip
 
@@ -13,3 +16,6 @@ bin/
 # Terraform
 .terraform*
 terraform.*
+
+# Python
+__pycache__/

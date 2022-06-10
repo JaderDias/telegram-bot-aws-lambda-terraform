@@ -1,7 +1,36 @@
 data "archive_file" "lambda_zip" {
   type        = "zip"
-  source_file = var.source_file
-  output_path = "${var.source_file}.zip"
+  source_dir  = var.source_dir
+  output_path = "${var.source_dir}.zip"
+}
+
+data "aws_iam_policy_document" "lambda_exec_role_policy" {
+  version = "2012-10-17"
+  statement {
+    actions = [
+      "ssm:GetParameter",
+    ]
+    resources = [
+      var.aws_ssm_parameter_arn
+    ]
+  }
+  statement {
+    actions = [
+      "kms:Decrypt",
+    ]
+    resources = [
+      var.aws_ssm_key_arn
+    ]
+  }
+  statement {
+    actions = [
+      "logs:CreateLogGroup",
+      "logs:CreateLogStream",
+      "logs:PutLogEvents",
+    ]
+    effect    = "Allow"
+    resources = ["arn:aws:logs:*:*:*"]
+  }
 }
 
 # Lambda function policy
@@ -9,22 +38,7 @@ resource "aws_iam_policy" "lambda_policy" {
   name        = "${var.function_name}-lambda-policy"
   description = "${var.function_name}-lambda-policy"
 
-  policy = <<EOF
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Action": [
-        "logs:CreateLogGroup",
-        "logs:CreateLogStream",
-        "logs:PutLogEvents"
-      ],
-      "Effect": "Allow",
-      "Resource": "*"
-    }
-  ]
-}
-EOF
+  policy = data.aws_iam_policy_document.lambda_exec_role_policy.json
 }
 
 # Lambda function role
@@ -60,6 +74,9 @@ resource "aws_lambda_function" "myfunc" {
   source_code_hash = filebase64sha256(data.archive_file.lambda_zip.output_path)
   runtime          = "go1.x"
   timeout          = 30
+  depends_on = [
+    data.archive_file.lambda_zip
+  ]
 }
 
 resource "aws_lambda_function_url" "url1" {
