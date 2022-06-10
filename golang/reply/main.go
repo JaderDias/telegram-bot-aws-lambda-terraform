@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"context"
 	"encoding/json"
 	"errors"
@@ -24,24 +23,6 @@ import (
 var (
 	HTTPMethodNotSupported = errors.New("HTTP method not supported")
 )
-
-func loadDictionary() ([]string, error) {
-	file, err := os.Open("sh.csv")
-	if err != nil {
-		return nil, fmt.Errorf("Error while opening file: %s", err)
-	}
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
-	var words []string
-	for scanner.Scan() {
-		words = append(words, scanner.Text())
-	}
-	if err := scanner.Err(); err != nil {
-		return nil, fmt.Errorf("Error while reading file: %s", err)
-	}
-	return words, nil
-}
 
 var titleMatcher = regexp.MustCompile(`^([^=]+)(=.*)$`)
 var undesiredSections = regexp.MustCompile(`(?s)====?(?:Conjugation|Declension|Derived terms|Pronunciation)====?[^=]*`)
@@ -152,6 +133,7 @@ func sendPoll(
 	s3Client *s3.Client,
 	s3BucketId string,
 	dictionary []string,
+	batchId int,
 	bot *tgbotapi.BotAPI,
 	chatID int64,
 ) {
@@ -174,7 +156,7 @@ func sendPoll(
 		poll.Poll.ID,
 		&Poll{
 			ChatID:         chatID,
-			WordLineNumber: correctLineNumber,
+			WordLineNumber: (batchId * 100) + correctLineNumber,
 			Language:       "sh",
 			CreateEpoch:    time.Now().Unix(),
 		},
@@ -222,15 +204,23 @@ func Reply(ctx context.Context, requestBody string) {
 	s3BucketId := os.Getenv("s3_bucket_id")
 	log.Printf("s3BucketId = %s\n", s3BucketId)
 	s3Client := s3.NewFromConfig(cfg)
-	dictionary, err := loadDictionary()
+	dictionary, batchId, err := GetWords(ctx, s3Client, s3BucketId, "sh")
 	if err != nil {
-		log.Printf("Error while loading dictionary: %s", err)
+		log.Printf("Error while getting words: %s", err)
 		return
 	}
 
+	log.Printf("batchId = %d\n", batchId)
 	if update.Message != nil { // If we got a message
-		log.Printf("[%s] %s", update.Message.From.UserName, update.Message.Text)
-		sendPoll(ctx, s3Client, s3BucketId, dictionary, bot, update.Message.Chat.ID)
+		sendPoll(
+			ctx,
+			s3Client,
+			s3BucketId,
+			dictionary,
+			batchId,
+			bot,
+			update.Message.Chat.ID,
+		)
 
 	} else if update.Poll != nil {
 		poll, err := GetPoll(ctx, s3Client, s3BucketId, update.Poll.ID)
@@ -238,7 +228,14 @@ func Reply(ctx context.Context, requestBody string) {
 			log.Printf("Error while retrieving poll: %s", err)
 		}
 
-		sendPoll(ctx, s3Client, s3BucketId, dictionary, bot, poll.ChatID)
+		sendPoll(
+			ctx,
+			s3Client,
+			s3BucketId,
+			dictionary,
+			batchId,
+			bot,
+			poll.ChatID)
 	}
 }
 

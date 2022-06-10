@@ -14,13 +14,13 @@ if [ ! -f "$SH_DICT" ]; then
     fi
     if [ ! -f "$SH_DICT" ]; then
         python3 python/parser/filter_wiktionary.py Serbo-Croatian A-ZÁČĆĐÍĽŇÔŠŤÚÝŽ ../$DUMP_XML_BZ2 | tee $SH_DICT
+        source upload.sh "sh"
     fi
 fi
 
 rm -rf ./bin
 mkdir ./bin
 mkdir ./bin/reply
-cp *.csv ./bin/reply/
 
 echo "+++++ build go packages +++++"
 
