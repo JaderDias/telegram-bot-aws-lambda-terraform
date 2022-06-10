@@ -1,7 +1,3 @@
-variable "aws_ssm_key_arn" {
-  type    = string
-  default = null
-}
 variable "aws_ssm_parameter_arn" {
   type    = string
   default = null

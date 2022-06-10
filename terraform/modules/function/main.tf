@@ -4,6 +4,10 @@ data "archive_file" "lambda_zip" {
   output_path = "${var.source_dir}.zip"
 }
 
+data "aws_kms_alias" "aws_ssm_key" {
+  name = "alias/aws/ssm"
+}
+
 data "aws_iam_policy_document" "lambda_exec_role_policy" {
   version = "2012-10-17"
   statement {
@@ -19,7 +23,7 @@ data "aws_iam_policy_document" "lambda_exec_role_policy" {
       "kms:Decrypt",
     ]
     resources = [
-      var.aws_ssm_key_arn
+      data.aws_kms_alias.aws_ssm_key.arn
     ]
   }
   statement {

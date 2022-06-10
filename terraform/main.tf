@@ -15,15 +15,10 @@ resource "random_pet" "this" {
   length = 2
 }
 
-resource "aws_kms_key" "my_key" {
-  description = "Sample KMS Key"
-}
-
 resource "aws_ssm_parameter" "telegram_bot_token" {
-  name   = "telegram_bot_token"
-  type   = "SecureString"
-  key_id = aws_kms_key.my_key.id
-  value  = var.telegram_bot_token
+  name  = "telegram_bot_token"
+  type  = "SecureString"
+  value = var.telegram_bot_token
 }
 
 #module "send_message_function" {
@@ -42,7 +37,6 @@ module "reply_function" {
   lambda_handler        = "reply"
   source_dir            = "../bin/reply"
   aws_ssm_parameter_arn = aws_ssm_parameter.telegram_bot_token.arn
-  aws_ssm_key_arn       = aws_kms_key.my_key.arn
 }
 
 resource "null_resource" "register_webhook" {
