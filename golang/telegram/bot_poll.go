@@ -72,6 +72,7 @@ func BotSendPoll(
 	s3Client *s3.Client,
 	s3BucketId string,
 	bot *tgbotapi.BotAPI,
+	languageCode string,
 	chatID int64,
 ) (*Chat, error) {
 	batchId := -1
@@ -79,7 +80,7 @@ func BotSendPoll(
 	correctLineNumber := -1
 	thisChat, err := GetChat(ctx, s3Client, s3BucketId, chatID)
 	if err == nil {
-		if language, ok := thisChat.Languages["sh"]; ok {
+		if language, ok := thisChat.Languages[languageCode]; ok {
 			if len(language.WrongAnswers) > 0 {
 				correctWordId = extractWordId(language.WrongAnswers)
 			} else if len(language.RightAnswers) > 0 && rand.Float32() > .5 {
@@ -93,7 +94,7 @@ func BotSendPoll(
 		batchId = int(correctWordId / 100)
 		correctLineNumber = correctWordId % 100
 	}
-	dictionary, batchId, err := GetWords(ctx, s3Client, s3BucketId, "sh", batchId)
+	dictionary, batchId, err := GetWords(ctx, s3Client, s3BucketId, languageCode, batchId)
 	if err != nil {
 		log.Printf("Error while getting words: %s", err)
 		return thisChat, err
@@ -118,7 +119,7 @@ func BotSendPoll(
 		&Poll{
 			ChatID:   chatID,
 			WordId:   (batchId * 100) + correctLineNumber,
-			Language: "sh",
+			Language: languageCode,
 		},
 		&RealClock{},
 	)

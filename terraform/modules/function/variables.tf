@@ -8,6 +8,9 @@ variable "function_name" {
 variable "lambda_handler" {
   type = string
 }
+variable "language" {
+  type = string
+}
 variable "source_dir" {
   type = string
 }

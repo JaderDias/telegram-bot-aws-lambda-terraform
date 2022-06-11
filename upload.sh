@@ -9,5 +9,6 @@ while mapfile -t -n 100 ary && ((${#ary[@]})); do
     printf '%s\n' "${ary[@]}" > $temp_memory_file_name
     # and upload those chunks to AWS S3
     aws s3api put-object --bucket my-bucket-legible-quetzal --key language/$language/$i --body $temp_memory_file_name
+    echo "uploaded $i"
     ((i=i+1))
 done <$language.csv

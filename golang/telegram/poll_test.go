@@ -12,16 +12,16 @@ import (
 )
 
 func TestPutPoll(t *testing.T) {
-	clock := main.MockClock{}
+	clock := telegram.MockClock{}
 	thirtyDays := clock.Now().Add(time.Hour * 24 * 30)
 	tests := []struct {
-		poll          *main.Poll
+		poll          *telegram.Poll
 		expectErr     error
 		expectBody    string
 		expectExpires *time.Time
 	}{
 		{
-			poll: &main.Poll{
+			poll: &telegram.Poll{
 				ChatID:   123,
 				WordId:   456,
 				Language: "sh",
@@ -31,21 +31,21 @@ func TestPutPoll(t *testing.T) {
 			expectExpires: &thirtyDays,
 		},
 		{
-			poll: &main.Poll{
+			poll: &telegram.Poll{
 				WordId:   456,
 				Language: "sh",
 			},
 			expectErr: fmt.Errorf("poll.ChatID is 0"),
 		},
 		{
-			poll: &main.Poll{
+			poll: &telegram.Poll{
 				ChatID:   123,
 				Language: "sh",
 			},
 			expectErr: fmt.Errorf("poll.WordId is 0"),
 		},
 		{
-			poll: &main.Poll{
+			poll: &telegram.Poll{
 				ChatID: 123,
 				WordId: 456,
 			},
@@ -54,8 +54,8 @@ func TestPutPoll(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		s3Client := main.MockS3Client{}
-		err := main.PutPoll(
+		s3Client := telegram.MockS3Client{}
+		err := telegram.PutPoll(
 			context.TODO(),
 			&s3Client,
 			"",
@@ -65,7 +65,7 @@ func TestPutPoll(t *testing.T) {
 		)
 		assert.Equal(t, test.expectErr, err)
 		if test.expectErr == nil {
-			assert.Equal(t, test.expectBody, main.ToString(s3Client.PutObjectInput.Body))
+			assert.Equal(t, test.expectBody, telegram.ToString(s3Client.PutObjectInput.Body))
 			assert.Equal(t, test.expectExpires, s3Client.PutObjectInput.Expires)
 		}
 	}
@@ -75,7 +75,7 @@ func TestPutPoll(t *testing.T) {
 func TestGetPoll(t *testing.T) {
 	tests := []struct {
 		key        string
-		expectPoll *main.Poll
+		expectPoll *telegram.Poll
 		expectErr  error
 		expectBody string
 	}{
@@ -85,7 +85,7 @@ func TestGetPoll(t *testing.T) {
 		},
 		{
 			key: "1",
-			expectPoll: &main.Poll{
+			expectPoll: &telegram.Poll{
 				ChatID:   123,
 				WordId:   456,
 				Language: "sh",
@@ -95,8 +95,8 @@ func TestGetPoll(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		s3Client := main.MockS3Client{}
-		actual, err := main.GetPoll(
+		s3Client := telegram.MockS3Client{}
+		actual, err := telegram.GetPoll(
 			context.TODO(),
 			&s3Client,
 			"",

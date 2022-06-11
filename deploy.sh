@@ -2,13 +2,18 @@
 
 echo -e "\n+++++ Starting deployment +++++\n"
 
+NL_DICT="nl.csv"
 SH_DICT="sh.csv"
 
-if [ ! -f "$SH_DICT" ]; then
+if [ ! -f "$NL_DICT" ] ||  [ ! -f "$SH_DICT" ]; then
     DUMP_XML_BZ2="enwiktionary-latest-pages-articles-multistream.xml.bz2"
     if [ ! -f "../$DUMP_XML_BZ2" ]; then
         wget "https://dumps.wikimedia.org/enwiktionary/latest/$DUMP_XML_BZ2"
         mv $DUMP_XML_BZ2 ../
+    fi
+    if [ ! -f "$NL_DICT" ]; then
+        python3 python/parser/filter_wiktionary.py Dutch A-ZÁÉÍÓÚÀÈËÏÖÜĲ ../$DUMP_XML_BZ2 | tee $NL_DICT
+        source upload.sh "nl"
     fi
     if [ ! -f "$SH_DICT" ]; then
         python3 python/parser/filter_wiktionary.py Serbo-Croatian A-ZÁČĆĐÍĽŇÔŠŤÚÝŽ ../$DUMP_XML_BZ2 | tee $SH_DICT
@@ -33,13 +38,13 @@ if [ ! -f 'terraform.tfstate' ]; then
   terraform init
 fi
 
-telegram_bot_token=`aws ssm get-parameter --name telegram_bot_token --output text --with-decryption | cut -f7`
-if [ -z "$telegram_bot_token" ]
+telegram_bot_tokens=`aws ssm get-parameter --name telegram_bot_tokens --output text --with-decryption | cut -f7`
+if [ -z "$telegram_bot_tokens" ]
 then
-    printf "paste the telegram bot token for the SH language: "
-    read telegram_bot_token
+    printf "paste the telegram_bot_tokens JSON: "
+    read telegram_bot_tokens
 fi
 
-terraform apply --var "telegram_bot_token=$telegram_bot_token"
+terraform apply --auto-approve --var "telegram_bot_tokens=$telegram_bot_tokens" 
 
 echo -e "\n+++++ Deployment done +++++\n"

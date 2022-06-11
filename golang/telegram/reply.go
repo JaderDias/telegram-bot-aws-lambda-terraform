@@ -4,15 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"log"
-	"os"
 
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/aws/aws-sdk-go-v2/service/ssm"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-func Reply(ctx context.Context, requestBody string) {
+func Reply(ctx context.Context, requestBody, s3BucketId, languageCode string) {
 	var update tgbotapi.Update
 	err := json.Unmarshal([]byte(requestBody), &update)
 	if err != nil {
@@ -25,30 +23,19 @@ func Reply(ctx context.Context, requestBody string) {
 		return
 	}
 
-	ssmClient := ssm.NewFromConfig(cfg)
-
-	parameterName := "telegram_bot_token"
-	parameterOutput, err := ssmClient.GetParameter(ctx, &ssm.GetParameterInput{
-		Name:           &parameterName,
-		WithDecryption: true,
-	})
+	telegramBotTokens, err := GetTokens(ctx, cfg)
 	if err != nil {
-		log.Printf("unable to get telegram bot token, %v", err)
-		return
+		log.Printf("unable to get telegram bot tokens, %v", err)
 	}
 
-	bot, err := tgbotapi.NewBotAPI(*parameterOutput.Parameter.Value)
+	log.Printf("s3BucketId = %s\n", s3BucketId)
+	s3Client := s3.NewFromConfig(cfg)
+
+	bot, err := GetBot(telegramBotTokens, languageCode)
 	if err != nil {
 		log.Printf("Error while creating bot: %s", err)
 		return
 	}
-
-	log.Printf("Authorized on account %s", bot.Self.UserName)
-	bot.Debug = true
-
-	s3BucketId := os.Getenv("s3_bucket_id")
-	log.Printf("s3BucketId = %s\n", s3BucketId)
-	s3Client := s3.NewFromConfig(cfg)
 
 	if update.Message != nil { // If we got a message
 		thisChat, err := BotSendPoll(
@@ -56,6 +43,7 @@ func Reply(ctx context.Context, requestBody string) {
 			s3Client,
 			s3BucketId,
 			bot,
+			languageCode,
 			update.Message.Chat.ID,
 		)
 		if err != nil {
@@ -79,6 +67,7 @@ func Reply(ctx context.Context, requestBody string) {
 			s3Client,
 			s3BucketId,
 			bot,
+			languageCode,
 			poll.ChatID)
 		if err != nil {
 			log.Printf("Error while sending poll: %s", err)
@@ -88,14 +77,23 @@ func Reply(ctx context.Context, requestBody string) {
 		if thisChat == nil {
 			thisChat = &Chat{}
 		}
-		language, ok := thisChat.Languages["sh"]
+		if thisChat.Languages == nil {
+			thisChat.Languages = make(map[string]Language)
+		}
+		language, ok := thisChat.Languages[languageCode]
 		if !ok {
 			language = Language{}
-			thisChat.Languages["sh"] = language
+			thisChat.Languages[languageCode] = language
 		}
 		if update.Poll.Options[update.Poll.CorrectOptionID].VoterCount == 0 {
+			if language.WrongAnswers == nil {
+				language.WrongAnswers = make(map[int]bool)
+			}
 			language.WrongAnswers[poll.WordId] = true
 		} else {
+			if language.RightAnswers == nil {
+				language.RightAnswers = make(map[int]bool)
+			}
 			language.RightAnswers[poll.WordId] = true
 		}
 		PutChat(ctx, s3Client, s3BucketId, poll.ChatID, thisChat)

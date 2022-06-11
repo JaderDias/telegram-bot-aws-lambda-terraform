@@ -40,7 +40,7 @@ data "aws_iam_policy_document" "lambda_exec_role_policy" {
       "s3:GetObject",
       "s3:PutObject",
     ]
-    effect    = "Allow"
+    effect = "Allow"
     resources = [
       "${var.s3_bucket_arn}/*",
       var.s3_bucket_arn,
@@ -92,6 +92,7 @@ resource "aws_lambda_function" "myfunc" {
   timeout          = 30
   environment {
     variables = {
+      language     = var.language
       s3_bucket_id = var.s3_bucket_id
     }
   }

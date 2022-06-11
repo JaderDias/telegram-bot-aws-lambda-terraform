@@ -7,8 +7,11 @@ import (
 )
 
 type Language struct {
-	RightAnswers map[int]bool
-	WrongAnswers map[int]bool
+	RightAnswers              map[int]bool
+	WrongAnswers              map[int]bool
+	SubscriptionPeriodSeconds int
+	SubscriptionStartEpoch    int
+	SubscriptionEndEpoch      int
 }
 
 type Chat struct {

@@ -5,8 +5,8 @@ variable "aws_region" {
   default = "eu-central-1"
 }
 
-variable "telegram_bot_token" {
-  description = "Telegram bot token."
+variable "telegram_bot_tokens" {
+  description = "Telegram bot tokens."
 
   type      = string
   sensitive = true

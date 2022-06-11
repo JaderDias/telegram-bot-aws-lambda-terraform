@@ -3,7 +3,10 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
+	"os"
+	"strings"
 
 	telegram "example.com/telegram"
 	"github.com/aws/aws-lambda-go/events"
@@ -16,13 +19,12 @@ var (
 
 func HandleRequest(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	log.Printf("Body size = %d. \n", len(request.Body))
-	log.Printf("Body = %s. \n", request.Body)
-	log.Println("Headers:")
-	for key, value := range request.Headers {
-		log.Printf("  %s: %s\n", key, value)
-	}
+	logRequest := fmt.Sprintf("%+v", request)
+	log.Printf("Request: %s", strings.ReplaceAll(logRequest, "\n", `\n`))
 
-	telegram.Reply(ctx, request.Body)
+	s3BucketId := os.Getenv("s3_bucket_id")
+	languageCode := os.Getenv("language")
+	telegram.Reply(ctx, request.Body, s3BucketId, languageCode)
 	return events.APIGatewayProxyResponse{Body: "POST", StatusCode: 200}, nil
 }
 
