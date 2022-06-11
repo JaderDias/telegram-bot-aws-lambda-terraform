@@ -1,7 +1,5 @@
 #!/bin/bash
 
-telegram_bot_token="$1"
-
 echo -e "\n+++++ Starting deployment +++++\n"
 
 SH_DICT="sh.csv"
@@ -33,6 +31,13 @@ echo "+++++ apply terraform +++++"
 cd ../../terraform
 if [ ! -f 'terraform.tfstate' ]; then
   terraform init
+fi
+
+telegram_bot_token=`aws ssm get-parameter --name telegram_bot_token --output text --with-decryption | cut -f7`
+if [ -z "$telegram_bot_token" ]
+then
+    printf "paste the telegram bot token for the SH language: "
+    read telegram_bot_token
 fi
 
 terraform apply --var "telegram_bot_token=$telegram_bot_token"
