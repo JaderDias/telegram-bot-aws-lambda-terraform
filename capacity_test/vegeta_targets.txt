@@ -1,0 +1,2 @@
+POST https://LAMBDAURL.lambda-url.eu-central-1.on.aws/
+@vegeta_post_body.json
