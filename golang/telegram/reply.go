@@ -23,26 +23,15 @@ func Reply(ctx context.Context, requestBody, s3BucketId, languageCode string) {
 		return
 	}
 
-	telegramBotTokens, err := GetTokens(ctx, cfg)
-	if err != nil {
-		log.Printf("unable to get telegram bot tokens, %v", err)
-	}
-
 	log.Printf("s3BucketId = %s\n", s3BucketId)
 	s3Client := s3.NewFromConfig(cfg)
-
-	bot, err := GetBot(telegramBotTokens, languageCode)
-	if err != nil {
-		log.Printf("Error while creating bot: %s", err)
-		return
-	}
 
 	if update.Message != nil { // If we got a message
 		thisChat, err := BotSendPoll(
 			ctx,
+			cfg,
 			s3Client,
 			s3BucketId,
-			bot,
 			languageCode,
 			update.Message.Chat.ID,
 		)
@@ -64,9 +53,9 @@ func Reply(ctx context.Context, requestBody, s3BucketId, languageCode string) {
 
 		thisChat, err := BotSendPoll(
 			ctx,
+			cfg,
 			s3Client,
 			s3BucketId,
-			bot,
 			languageCode,
 			poll.ChatID)
 		if err != nil {

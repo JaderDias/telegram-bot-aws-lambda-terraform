@@ -6,6 +6,7 @@ import (
 	"log"
 	"math/rand"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -69,9 +70,9 @@ func extractWordId(answers map[int]bool) int {
 
 func BotSendPoll(
 	ctx context.Context,
+	cfg aws.Config,
 	s3Client *s3.Client,
 	s3BucketId string,
-	bot *tgbotapi.BotAPI,
 	languageCode string,
 	chatID int64,
 ) (*Chat, error) {
@@ -103,6 +104,18 @@ func BotSendPoll(
 	correctLineNumber, sendPollConfig := getSendPollConfig(dictionary, correctLineNumber)
 	sendPollConfig.BaseChat = tgbotapi.BaseChat{
 		ChatID: chatID,
+	}
+
+	telegramBotTokens, err := GetTokens(ctx, cfg)
+	if err != nil {
+		log.Printf("unable to get telegram bot tokens, %v", err)
+		return thisChat, err
+	}
+
+	bot, err := GetBot(telegramBotTokens, languageCode)
+	if err != nil {
+		log.Printf("Error while creating bot: %s", err)
+		return thisChat, err
 	}
 
 	poll, err := bot.Send(sendPollConfig)
