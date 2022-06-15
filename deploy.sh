@@ -2,8 +2,8 @@
 
 echo -e "\n+++++ Starting deployment +++++\n"
 
-NL_DICT="nl.csv"
-SH_DICT="sh.csv"
+NL_DICT="golang/upload/nl.csv"
+SH_DICT="golang/upload/sh.csv"
 
 if [ ! -f "$NL_DICT" ] ||  [ ! -f "$SH_DICT" ]; then
     DUMP_XML_BZ2="enwiktionary-latest-pages-articles-multistream.xml.bz2"
@@ -13,11 +13,9 @@ if [ ! -f "$NL_DICT" ] ||  [ ! -f "$SH_DICT" ]; then
     fi
     if [ ! -f "$NL_DICT" ]; then
         python3 python/parser/filter_wiktionary.py Dutch A-ZÁÉÍÓÚÀÈËÏÖÜĲ ../$DUMP_XML_BZ2 | tee $NL_DICT
-        source upload.sh "nl"
     fi
     if [ ! -f "$SH_DICT" ]; then
         python3 python/parser/filter_wiktionary.py Serbo-Croatian A-ZÁČĆĐÍĽŇÔŠŤÚÝŽ ../$DUMP_XML_BZ2 | tee $SH_DICT
-        source upload.sh "sh"
     fi
 fi
 

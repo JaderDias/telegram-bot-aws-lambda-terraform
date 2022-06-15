@@ -30,6 +30,14 @@ resource "aws_s3_bucket_acl" "bucket_acl" {
   acl    = "private"
 }
 
+resource "null_resource" "upload_language" {
+  provisioner "local-exec" {
+    working_dir = "../golang/upload"
+    command = format("go run . '%s'", aws_s3_bucket.bucket.id)
+    interpreter = ["bash", "-c"]
+  }
+}
+
 #module "send_message_function" {
 #  source = "./modules/function"
 
