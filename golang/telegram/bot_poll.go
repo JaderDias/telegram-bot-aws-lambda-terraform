@@ -75,6 +75,7 @@ func BotSendPoll(
 	s3BucketId string,
 	languageCode string,
 	chatID int64,
+	tokenParameterName string,
 ) (*Chat, error) {
 	batchId := -1
 	correctWordId := -1
@@ -106,7 +107,7 @@ func BotSendPoll(
 		ChatID: chatID,
 	}
 
-	telegramBotTokens, err := GetTokens(ctx, cfg)
+	telegramBotTokens, err := GetTokens(ctx, cfg, tokenParameterName)
 	if err != nil {
 		log.Printf("unable to get telegram bot tokens, %v", err)
 		return thisChat, err

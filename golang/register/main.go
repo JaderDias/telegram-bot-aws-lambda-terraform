@@ -12,13 +12,15 @@ import (
 )
 
 func main() {
-	if len(os.Args) < 2 {
-		log.Println("Usage: ./main <telegramBotURLs>")
+	if len(os.Args) < 3 {
+		log.Println("Usage: ./main <tokenParameterName> <telegramBotURLs>")
 		os.Exit(1)
 	}
 
+	tokenParameterName := os.Args[1]
+
 	var telegramBotURLs map[string]string
-	err := json.Unmarshal([]byte(os.Args[1]), &telegramBotURLs)
+	err := json.Unmarshal([]byte(os.Args[2]), &telegramBotURLs)
 	if err != nil {
 		log.Printf("unable to parse telegram bot tokens, %v", err)
 	}
@@ -30,7 +32,7 @@ func main() {
 		return
 	}
 
-	telegramBotTokens, err := telegram.GetTokens(ctx, cfg)
+	telegramBotTokens, err := telegram.GetTokens(ctx, cfg, tokenParameterName)
 	if err != nil {
 		log.Printf("unable to get telegram bot tokens, %v", err)
 	}

@@ -9,10 +9,9 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
 )
 
-func GetTokens(ctx context.Context, cfg aws.Config) (map[string]string, error) {
+func GetTokens(ctx context.Context, cfg aws.Config, parameterName string) (map[string]string, error) {
 	ssmClient := ssm.NewFromConfig(cfg)
 
-	parameterName := "telegram_bot_tokens"
 	parameterOutput, err := ssmClient.GetParameter(ctx, &ssm.GetParameterInput{
 		Name:           &parameterName,
 		WithDecryption: true,

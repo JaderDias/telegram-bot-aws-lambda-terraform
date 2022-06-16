@@ -24,7 +24,8 @@ func HandleRequest(ctx context.Context, request events.APIGatewayProxyRequest) (
 
 	s3BucketId := os.Getenv("s3_bucket_id")
 	languageCode := os.Getenv("language")
-	telegram.Reply(ctx, request.Body, s3BucketId, languageCode)
+	tokenParameterName := os.Getenv("token_parameter_name")
+	telegram.Reply(ctx, request.Body, s3BucketId, languageCode, tokenParameterName)
 	return events.APIGatewayProxyResponse{Body: "POST", StatusCode: 200}, nil
 }
 

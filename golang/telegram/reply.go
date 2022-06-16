@@ -10,7 +10,7 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-func Reply(ctx context.Context, requestBody, s3BucketId, languageCode string) {
+func Reply(ctx context.Context, requestBody, s3BucketId, languageCode, tokenParameterName string) {
 	var update tgbotapi.Update
 	err := json.Unmarshal([]byte(requestBody), &update)
 	if err != nil {
@@ -34,6 +34,7 @@ func Reply(ctx context.Context, requestBody, s3BucketId, languageCode string) {
 			s3BucketId,
 			languageCode,
 			update.Message.Chat.ID,
+			tokenParameterName,
 		)
 		if err != nil {
 			log.Printf("Error while sending poll: %s", err)
@@ -57,7 +58,9 @@ func Reply(ctx context.Context, requestBody, s3BucketId, languageCode string) {
 			s3Client,
 			s3BucketId,
 			languageCode,
-			poll.ChatID)
+			poll.ChatID,
+			tokenParameterName,
+		)
 		if err != nil {
 			log.Printf("Error while sending poll: %s", err)
 			return
