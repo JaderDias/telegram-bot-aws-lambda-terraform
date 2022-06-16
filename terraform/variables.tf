@@ -24,8 +24,3 @@ variable "efs_provisioned_throughput" {
   description = "The throughput, measured in MiB/s, that you want to provision for the file system. Only applicable with `throughput_mode` set to `provisioned`"
   default     = null
 }
-
-variable "availability_zones" {
-  description = "availability zones for the vpc"
-  default     = ["us-east-1a", "us-east-1b", "us-east-1c"]
-}

@@ -5,7 +5,7 @@ module "vpc" {
   name = var.name
   cidr = var.vpc_cidr
 
-  azs             = var.azs
+  azs             = [for az in ["a", "b", "c"] : "${var.aws_region}${az}"]
   private_subnets = var.private_subnet_cidrs
   public_subnets  = var.public_subnet_cidrs
 

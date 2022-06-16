@@ -1,3 +1,8 @@
+variable "aws_region" {
+  description = "AWS region for all resources."
+  type        = string
+}
+
 variable "name" {
   description = "the name fo the vpc"
   default     = "lambda-vpc"
@@ -6,11 +11,6 @@ variable "name" {
 variable "vpc_cidr" {
   description = "cidr range for the vpc"
   default     = "10.0.0.0/16"
-}
-
-variable "azs" {
-  description = "availability zones for the vpc"
-  default     = ["us-east-1a", "us-east-1b", "us-east-1c"]
 }
 
 variable "public_subnet_cidrs" {
