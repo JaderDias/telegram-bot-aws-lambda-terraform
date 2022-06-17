@@ -15,7 +15,7 @@ resource "aws_lambda_function" "myfunc" {
   environment {
     variables = {
       language             = var.language
-      token_parameter_name = var.ssm_parameter_name
+      token_parameter_name = var.ssm_parameter.name
       LOCAL_MOUNT_PATH     = var.local_mount_path
     }
   }

@@ -11,6 +11,7 @@ import (
 )
 
 func getSendPollConfig(dictionary []string, correctLineNumber int) (int, tgbotapi.SendPollConfig) {
+	log.Printf("getSendPollConfig correctLineNumber %d\n", correctLineNumber)
 	options := [3]Word{}
 	grammaticalClass := ""
 	for i := 0; i < 3; {

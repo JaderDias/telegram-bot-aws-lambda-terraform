@@ -3,6 +3,7 @@ package telegram
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"time"
 )
@@ -52,6 +53,7 @@ func PutPoll(
 func GetPoll(
 	pollId string,
 ) (*Poll, error) {
+	log.Printf("GetPoll pollId = %s\n", pollId)
 	key := fmt.Sprintf("/mnt/efs/poll/%s", pollId)
 	content, err := os.ReadFile(key)
 	if err != nil {

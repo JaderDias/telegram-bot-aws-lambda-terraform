@@ -7,6 +7,7 @@ import (
 )
 
 func GetBot(tokens map[string]string, language string) (*tgbotapi.BotAPI, error) {
+	log.Printf("GetBot language = %s\n", language)
 	bot, err := tgbotapi.NewBotAPI(tokens[language])
 	if err != nil {
 		log.Printf("Error while creating bot: %s", err)

@@ -23,13 +23,7 @@ variable "ssm_key_arn" {
   type    = string
   default = null
 }
-variable "ssm_parameter_arn" {
-  type    = string
-  default = null
-}
-variable "ssm_parameter_name" {
-  type    = string
-  default = null
+variable "ssm_parameter" {
 }
 
 variable "subnet_ids" {

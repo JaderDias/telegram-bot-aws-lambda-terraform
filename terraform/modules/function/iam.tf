@@ -4,7 +4,7 @@ data "aws_iam_policy_document" "lambda_exec_role_policy" {
       "ssm:GetParameter",
     ]
     resources = [
-      var.ssm_parameter_arn
+      var.ssm_parameter.arn
     ]
   }
   statement {
