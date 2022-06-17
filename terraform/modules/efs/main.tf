@@ -5,17 +5,20 @@ resource "aws_efs_file_system" "efs_for_lambda" {
   throughput_mode                 = var.throughput_mode
   provisioned_throughput_in_mibps = var.provisioned_throughput
 
-  tags = {
-    Name = var.name
+  lifecycle_policy {
+    transition_to_ia = "AFTER_7_DAYS"
   }
+
+  tags = var.tags
 }
 
 # mount targets for each subnets
 resource "aws_efs_mount_target" "mount_target" {
-  count           = length(var.subnet_ids)
+  for_each           = var.subnets
   file_system_id  = aws_efs_file_system.efs_for_lambda.id
-  subnet_id       = var.subnet_ids[count.index]
+  subnet_id       = each.value.id
   security_groups = var.security_group_ids
+
 }
 
 # EFS access point used by lambda file system
@@ -35,4 +38,6 @@ resource "aws_efs_access_point" "access_point_lambda" {
     gid = 1000
     uid = 1000
   }
+
+  tags = var.tags
 }

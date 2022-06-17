@@ -3,10 +3,8 @@ variable "name" {
 }
 
 
-variable "subnet_ids" {
-  description = "target subnet ids to mount efs file system"
-  type        = list(string)
-  default     = []
+variable "subnets" {
+  description = "target subnets to mount efs file system"
 }
 
 variable "security_group_ids" {
@@ -28,4 +26,9 @@ variable "throughput_mode" {
 variable "provisioned_throughput" {
   description = "The throughput, measured in MiB/s, that you want to provision for the file system. Only applicable with `throughput_mode` set to `provisioned`"
   default     = null
+}
+
+variable "tags" {
+  description = "value of the tags"
+  type        = map(string)
 }

@@ -58,16 +58,6 @@ then
     exit 1
 fi
 
-cd ../upload
-go get
-go test ./...
-env GOOS=linux GOARCH=amd64 go build -o ../../bin/upload/upload
-if [ $? -ne 0 ]
-then
-    echo "build upload packages failed"
-    exit 1
-fi
-
 echo "+++++ apply terraform +++++"
 cd ../../terraform
 terraform init
