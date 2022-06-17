@@ -26,8 +26,8 @@ variable "ssm_key_arn" {
 variable "ssm_parameter" {
 }
 
-variable "subnet_ids" {
-  description = "subnet ids for lambda function"
+variable "subnets" {
+  description = "subnets for lambda function"
 }
 
 variable "security_groups" {
@@ -47,4 +47,8 @@ variable "local_mount_path" {
 
 variable "efs_mount_targets" {
   description = "efs file system mount targets"
+}
+variable "tags" {
+  description = "tags for lambda function"
+  type        = map(string)
 }

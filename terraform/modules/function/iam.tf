@@ -15,15 +15,6 @@ data "aws_iam_policy_document" "lambda_exec_role_policy" {
       var.ssm_key_arn
     ]
   }
-  statement {
-    actions = [
-      "logs:CreateLogGroup",
-      "logs:CreateLogStream",
-      "logs:PutLogEvents",
-    ]
-    effect    = "Allow"
-    resources = ["arn:aws:logs:*:*:*"]
-  }
 }
 
 # Lambda function policy

@@ -58,11 +58,6 @@ then
     exit 1
 fi
 
-cd ../upload
-go get
-go test ./...
-env GOOS=linux GOARCH=amd64 go build -o ../../bin/upload/upload
-
 echo "+++++ apply terraform +++++"
 cd ../../terraform
 terraform init

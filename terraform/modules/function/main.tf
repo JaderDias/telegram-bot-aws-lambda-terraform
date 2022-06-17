@@ -19,12 +19,10 @@ resource "aws_lambda_function" "myfunc" {
       LOCAL_MOUNT_PATH     = var.local_mount_path
     }
   }
-  tags = {
-    environment = terraform.workspace
-  }
+  tags = var.tags
 
   vpc_config {
-    subnet_ids         = var.subnet_ids
+    subnet_ids         = [for subnet in var.subnets : subnet.id]
     security_group_ids = var.security_groups
   }
 
@@ -37,7 +35,8 @@ resource "aws_lambda_function" "myfunc" {
   # Explicitly declare dependency on EFS mount target.
   # When creating or updating Lambda functions, mount target must be in 'available' lifecycle state.
   depends_on = [
+    aws_cloudwatch_log_group.lambda_log_group,
+    data.archive_file.lambda_zip,
     var.efs_mount_targets,
-    data.archive_file.lambda_zip
   ]
 }

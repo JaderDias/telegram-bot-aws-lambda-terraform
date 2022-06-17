@@ -18,20 +18,25 @@ resource "random_pet" "this" {
 module "vpc" {
   source = "./modules/vpc"
 
-  name                 = "${terraform.workspace}-${var.name}-vpc"
+  name                 = "default-${var.aws_region}-vpc"
   aws_region           = var.aws_region
-  vpc_cidr             = "10.0.0.0/16"
-  public_subnet_cidrs  = ["10.0.96.0/20", "10.0.112.0/20", "10.0.128.0/20"]
+  tags = {
+    "environment" = terraform.workspace
+  }
 }
 
 module "efs" {
   source = "./modules/efs"
 
   name                   = "${terraform.workspace}-${var.name}-efs"
-  subnet_ids             = module.vpc.public_subnets
-  security_group_ids     = [module.vpc.sg_for_lambda.id]
+  subnets             = module.vpc.public_subnets
+  security_group_ids     = [module.vpc.sg_for_lambda]
   provisioned_throughput = var.efs_provisioned_throughput
   throughput_mode        = var.efs_throughput_mode
+
+  tags = {
+    "environment" = terraform.workspace
+  }
 }
 
 module "upload_function" {
@@ -40,13 +45,16 @@ module "upload_function" {
   function_name   = "${terraform.workspace}_upload_${random_pet.this.id}"
   lambda_handler  = "upload"
   source_dir      = "../bin/upload"
-  subnet_ids      = module.vpc.public_subnets
-  security_groups = [module.vpc.sg_for_lambda.id]
+  subnets      = module.vpc.public_subnets
+  security_groups = [module.vpc.sg_for_lambda]
   ssm_parameter   = aws_ssm_parameter.telegram_bot_tokens
   ssm_key_arn     = aws_kms_key.aws_ssm_key.arn
 
   efs_access_point_arn = module.efs.access_point_arn
   efs_mount_targets    = module.efs.mount_targets
+  tags = {
+    "environment" = terraform.workspace
+  }
 }
 
 resource "aws_lambda_invocation" "upload" {
@@ -75,14 +83,17 @@ module "reply_function" {
   lambda_handler  = "reply"
   language        = each.key
   source_dir      = "../bin/reply"
-  subnet_ids      = module.vpc.public_subnets
-  security_groups = [module.vpc.sg_for_lambda.id]
+  subnets      = module.vpc.public_subnets
+  security_groups = [module.vpc.sg_for_lambda]
   ssm_parameter   = aws_ssm_parameter.telegram_bot_tokens
   ssm_key_arn     = aws_kms_key.aws_ssm_key.arn
 
   efs_access_point_arn   = module.efs.access_point_arn
   efs_mount_targets      = module.efs.mount_targets
   url_authorization_type = "NONE"
+  tags = {
+    "environment" = terraform.workspace
+  }
   depends_on = [
     aws_lambda_invocation.upload,
     data.archive_file.lambda_zip
