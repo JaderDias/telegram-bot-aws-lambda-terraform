@@ -10,6 +10,7 @@ import (
 )
 
 func GetTokens(ctx context.Context, cfg aws.Config, parameterName string) (map[string]string, error) {
+	log.Printf("GetTokens parameterName = %s\n", parameterName)
 	ssmClient := ssm.NewFromConfig(cfg)
 
 	parameterOutput, err := ssmClient.GetParameter(ctx, &ssm.GetParameterInput{

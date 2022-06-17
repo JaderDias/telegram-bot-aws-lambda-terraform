@@ -16,6 +16,7 @@ func GetWords(
 	language string,
 	batchId int,
 ) ([]string, int, error) {
+	log.Printf("GetWords batchId = %d\n", batchId)
 	if batchId == -1 {
 		batchId = rand.Intn(260)
 		log.Printf("random batchId: %d", batchId)

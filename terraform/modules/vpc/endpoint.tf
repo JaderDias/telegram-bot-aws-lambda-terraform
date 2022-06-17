@@ -8,18 +8,13 @@ module "vpc_endpoints" {
     ssm = {
       service             = "ssm"
       private_dns_enabled = true
-      subnet_ids          = module.vpc.private_subnets
+      subnet_ids          = module.vpc.public_subnets
       security_group_ids  = [aws_security_group.vpc_tls.id]
-    },
-    lambda = {
-      service             = "lambda"
-      private_dns_enabled = true
-      subnet_ids          = module.vpc.private_subnets
     },
     kms = {
       service             = "kms"
       private_dns_enabled = true
-      subnet_ids          = module.vpc.private_subnets
+      subnet_ids          = module.vpc.public_subnets
       security_group_ids  = [aws_security_group.vpc_tls.id]
     },
   }

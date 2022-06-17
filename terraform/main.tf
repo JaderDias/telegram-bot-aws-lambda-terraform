@@ -22,14 +22,13 @@ module "vpc" {
   aws_region           = var.aws_region
   vpc_cidr             = "10.0.0.0/16"
   public_subnet_cidrs  = ["10.0.96.0/20", "10.0.112.0/20", "10.0.128.0/20"]
-  private_subnet_cidrs = ["10.0.0.0/20", "10.0.16.0/20", "10.0.32.0/20"]
 }
 
 module "efs" {
   source = "./modules/efs"
 
   name                   = "${terraform.workspace}-${var.name}-efs"
-  subnet_ids             = module.vpc.private_subnets
+  subnet_ids             = module.vpc.public_subnets
   security_group_ids     = [module.vpc.sg_for_lambda.id]
   provisioned_throughput = var.efs_provisioned_throughput
   throughput_mode        = var.efs_throughput_mode
@@ -38,13 +37,13 @@ module "efs" {
 module "upload_function" {
   source = "./modules/function"
 
-  function_name     = "${terraform.workspace}_upload_${random_pet.this.id}"
-  lambda_handler    = "upload"
-  source_dir        = "../bin/upload"
-  subnet_ids        = module.vpc.private_subnets
-  security_groups   = [module.vpc.sg_for_lambda.id]
-  ssm_parameter_arn = aws_ssm_parameter.telegram_bot_tokens.arn
-  ssm_key_arn       = aws_kms_key.aws_ssm_key.arn
+  function_name   = "${terraform.workspace}_upload_${random_pet.this.id}"
+  lambda_handler  = "upload"
+  source_dir      = "../bin/upload"
+  subnet_ids      = module.vpc.public_subnets
+  security_groups = [module.vpc.sg_for_lambda.id]
+  ssm_parameter   = aws_ssm_parameter.telegram_bot_tokens
+  ssm_key_arn     = aws_kms_key.aws_ssm_key.arn
 
   efs_access_point_arn = module.efs.access_point_arn
   efs_mount_targets    = module.efs.mount_targets
@@ -72,15 +71,14 @@ module "reply_function" {
   for_each = jsondecode(nonsensitive(var.telegram_bot_tokens))
   source   = "./modules/function"
 
-  function_name      = "${terraform.workspace}_reply_${each.key}_${random_pet.this.id}"
-  lambda_handler     = "reply"
-  language           = each.key
-  source_dir         = "../bin/reply"
-  subnet_ids         = module.vpc.private_subnets
-  security_groups    = [module.vpc.sg_for_lambda.id]
-  ssm_parameter_arn  = aws_ssm_parameter.telegram_bot_tokens.arn
-  ssm_parameter_name = aws_ssm_parameter.telegram_bot_tokens.name
-  ssm_key_arn        = aws_kms_key.aws_ssm_key.arn
+  function_name   = "${terraform.workspace}_reply_${each.key}_${random_pet.this.id}"
+  lambda_handler  = "reply"
+  language        = each.key
+  source_dir      = "../bin/reply"
+  subnet_ids      = module.vpc.public_subnets
+  security_groups = [module.vpc.sg_for_lambda.id]
+  ssm_parameter   = aws_ssm_parameter.telegram_bot_tokens
+  ssm_key_arn     = aws_kms_key.aws_ssm_key.arn
 
   efs_access_point_arn   = module.efs.access_point_arn
   efs_mount_targets      = module.efs.mount_targets

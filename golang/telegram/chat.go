@@ -3,6 +3,7 @@ package telegram
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 )
 
@@ -36,6 +37,7 @@ func PutChat(
 func GetChat(
 	chatId int64,
 ) (*Chat, error) {
+	log.Printf("GetChat chatId = %d\n", chatId)
 	key := fmt.Sprintf("/mnt/efs/chat/%d", chatId)
 	content, err := os.ReadFile(key)
 	if err != nil {
