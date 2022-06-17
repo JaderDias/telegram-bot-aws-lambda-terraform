@@ -12,25 +12,7 @@ module "vpc" {
   enable_dns_hostnames = true
   enable_dns_support   = true
 
-  enable_nat_gateway = true # if true, costs $0.70/day, but it's required to retrieve parameters from SSM
-  single_nat_gateway = true
+  enable_nat_gateway = false # if true, costs $0.73/day
+  single_nat_gateway = false
 
-}
-
-resource "aws_security_group" "sg_lambda" {
-  vpc_id = module.vpc.vpc_id
-
-  ingress {
-    protocol  = -1
-    self      = true
-    from_port = 0
-    to_port   = 0
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
 }
