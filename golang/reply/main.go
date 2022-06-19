@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"log"
 	"os"
@@ -30,8 +31,17 @@ func HandleRequest(ctx context.Context, request events.APIGatewayProxyRequest) (
 
 	languageCode := os.Getenv("language")
 	tokenParameterName := os.Getenv("token_parameter_name")
-	telegram.Reply(ctx, &OsFileReader{}, request.Body, languageCode, tokenParameterName)
-	return events.APIGatewayProxyResponse{Body: "POST", StatusCode: 200}, nil
+	params, err := telegram.Reply(ctx, &OsFileReader{}, request.Body, languageCode, tokenParameterName)
+	if err != nil {
+		return events.APIGatewayProxyResponse{}, err
+	}
+
+	body, err := json.Marshal(params)
+	if err != nil {
+		return events.APIGatewayProxyResponse{}, err
+	}
+
+	return events.APIGatewayProxyResponse{Body: string(body), StatusCode: 200}, nil
 }
 
 func main() {

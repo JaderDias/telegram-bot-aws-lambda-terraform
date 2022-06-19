@@ -2,14 +2,14 @@
 environment="$1"
 if [ -z "$environment" ]
 then
-    echo "Usage: deploy.sh <environment>"
+    echo "Usage: destroy.sh <environment> <aws_region>"
     exit 1
 fi
 
 aws_region="$2"
 if [ -z "$aws_region" ]
 then
-    echo "Usage: deploy.sh <environment> <aws_region>"
+    echo "Usage: destroy.sh <environment> <aws_region>"
     exit 1
 fi
 

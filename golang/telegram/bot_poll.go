@@ -75,7 +75,7 @@ func BotSendPoll(
 	languageCode string,
 	chatID int64,
 	tokenParameterName string,
-) (*Chat, error) {
+) (*Chat, map[string]string, error) {
 	batchId := -1
 	correctWordId := -1
 	correctLineNumber := -1
@@ -98,7 +98,7 @@ func BotSendPoll(
 	dictionary, batchId, err := GetWords(fileReader, languageCode, batchId)
 	if err != nil {
 		log.Printf("Error while getting words: %s", err)
-		return thisChat, err
+		return thisChat, nil, err
 	}
 
 	correctLineNumber, sendPollConfig := getSendPollConfig(dictionary, correctLineNumber)
@@ -106,36 +106,12 @@ func BotSendPoll(
 		ChatID: chatID,
 	}
 
-	telegramBotTokens, err := GetTokens(ctx, cfg, tokenParameterName)
+	params, err := Params(sendPollConfig)
 	if err != nil {
-		log.Printf("unable to get telegram bot tokens, %v", err)
-		return thisChat, err
+		log.Printf("Error while getting params: %s", err)
+		return thisChat, nil, err
 	}
 
-	bot, err := GetBot(telegramBotTokens, languageCode)
-	if err != nil {
-		log.Printf("Error while creating bot: %s", err)
-		return thisChat, err
-	}
-
-	poll, err := bot.Send(sendPollConfig)
-	if err != nil {
-		log.Printf("Error while sending poll: %s", err)
-		return thisChat, err
-	}
-
-	err = PutPoll(
-		poll.Poll.ID,
-		&Poll{
-			ChatID:   chatID,
-			WordId:   (batchId * 100) + correctLineNumber,
-			Language: languageCode,
-		},
-	)
-	if err != nil {
-		log.Printf("Error while saving poll: %s", err)
-		return thisChat, err
-	}
-
-	return thisChat, nil
+	params["method"] = "sendPoll"
+	return thisChat, params, nil
 }
