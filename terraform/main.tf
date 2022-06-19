@@ -80,7 +80,8 @@ resource "null_resource" "register_webhook" {
   provisioner "local-exec" {
     working_dir = "../golang/register"
     command = format(
-      "go run . %s '%s'",
+      "go run . %s %s '%s'",
+      var.aws_region,
       aws_ssm_parameter.telegram_bot_tokens.name,
       jsonencode({
         for k, v in module.reply_function : k => v["function_url"]

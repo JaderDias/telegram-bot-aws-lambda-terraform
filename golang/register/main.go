@@ -12,29 +12,29 @@ import (
 )
 
 func main() {
-	if len(os.Args) < 3 {
-		log.Println("Usage: ./main <tokenParameterName> <telegramBotURLs>")
+	if len(os.Args) < 4 {
+		log.Println("Usage: ./main <awsRegion> <tokenParameterName> <telegramBotURLs>")
 		os.Exit(1)
 	}
 
-	tokenParameterName := os.Args[1]
+	awsRegion := os.Args[1]
+	tokenParameterName := os.Args[2]
 
 	var telegramBotURLs map[string]string
-	err := json.Unmarshal([]byte(os.Args[2]), &telegramBotURLs)
+	err := json.Unmarshal([]byte(os.Args[3]), &telegramBotURLs)
 	if err != nil {
-		log.Printf("unable to parse telegram bot tokens, %v", err)
+		log.Panicf("unable to parse telegram bot tokens, %v", err)
 	}
 
 	ctx := context.Background()
-	cfg, err := config.LoadDefaultConfig(ctx)
+	cfg, err := config.LoadDefaultConfig(ctx, config.WithRegion(awsRegion))
 	if err != nil {
-		log.Printf("unable to load SDK config, %v", err)
-		return
+		log.Panicf("unable to load SDK config, %v", err)
 	}
 
 	telegramBotTokens, err := telegram.GetTokens(ctx, cfg, tokenParameterName)
 	if err != nil {
-		log.Printf("unable to get telegram bot tokens, %v", err)
+		log.Panicf("unable to get telegram bot tokens, %v", err)
 	}
 
 	for language, token := range telegramBotTokens {
@@ -42,7 +42,7 @@ func main() {
 		log.Printf("language = %s, url = %s\n", language, telegramBotURL)
 		bot, err := tgbotapi.NewBotAPI(token)
 		if err != nil {
-			log.Panic(err)
+			log.Panicf("Error while creating bot: %s", err)
 		}
 
 		log.Printf("Authorized on account %s", bot.Self.UserName)
@@ -50,12 +50,12 @@ func main() {
 		// Register device with tgbotapi
 		_, err = bot.SetWebhook(tgbotapi.NewWebhook(telegramBotURL))
 		if err != nil {
-			log.Panic(err)
+			log.Panicf("Error while setting webhook: %s", err)
 		}
 
 		webHookInfo, err := bot.GetWebhookInfo()
 		if err != nil {
-			log.Panic(err)
+			log.Panicf("Error while getting webhook info: %s", err)
 		}
 
 		log.Printf("Webhook info: %+v\n", webHookInfo)

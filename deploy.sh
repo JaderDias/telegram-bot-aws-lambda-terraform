@@ -2,10 +2,16 @@
 environment="$1"
 if [ -z "$environment" ]
 then
-    echo "Usage: deploy.sh <environment>"
+    echo "Usage: deploy.sh <environment> <aws_region>"
     exit 1
 fi
 
+aws_region="$2"
+if [ -z "$aws_region" ]
+then
+    echo "Usage: deploy.sh <environment> <aws_region>"
+    exit 1
+fi
 
 echo -e "\n+++++ Starting deployment +++++\n"
 
@@ -29,24 +35,42 @@ fi
 rm -rf ./bin
 mkdir ./bin
 mkdir ./bin/reply
+mkdir ./bin/upload
+cp *.csv ./bin/upload/
 
 echo "+++++ build go packages +++++"
 
 cd golang/reply
 go get
-go test ./...
 env GOOS=linux GOARCH=amd64 go build -o ../../bin/reply/reply
+if [ $? -ne 0 ]
+then
+    echo "build reply packages failed"
+    exit 1
+fi
+
+cd ../upload
+go get
+env GOOS=linux GOARCH=amd64 go build -o ../../bin/upload/upload
+if [ $? -ne 0 ]
+then
+    echo "build upload packages failed"
+    exit 1
+fi
 
 echo "+++++ apply terraform +++++"
 cd ../../terraform
-if [ ! -f 'terraform.tfstate' ]; then
-  terraform init
+terraform init
+if [ $? -ne 0 ]
+then
+    echo "terraform init failed"
+    exit 1
 fi
 
 terraform workspace new $environment
 terraform workspace select $environment
 
-telegram_bot_tokens=`aws ssm get-parameter --name "${environment}_telegram_bot_tokens" --output text --with-decryption | cut -f7`
+telegram_bot_tokens=`aws ssm get-parameter --region $aws_region --name "${environment}_telegram_bot_tokens" --output text --with-decryption | cut -f7`
 if [ -z "$telegram_bot_tokens" ]
 then
     printf "paste the telegram_bot_tokens JSON: "
@@ -54,6 +78,7 @@ then
 fi
 
 terraform apply --auto-approve \
+    --var "aws_region=$aws_region" \
     --var "telegram_bot_tokens=$telegram_bot_tokens"
 
 echo -e "\n+++++ Deployment done +++++\n"

@@ -6,7 +6,14 @@ then
     exit 1
 fi
 
-telegram_bot_tokens=`aws ssm get-parameter --name "${environment}_telegram_bot_tokens" --output text --with-decryption | cut -f7`
+aws_region="$2"
+if [ -z "$aws_region" ]
+then
+    echo "Usage: deploy.sh <environment> <aws_region>"
+    exit 1
+fi
+
+telegram_bot_tokens=`aws ssm get-parameter --region $aws_region --name "${environment}_telegram_bot_tokens" --output text --with-decryption | cut -f7`
 if [ -z "$telegram_bot_tokens" ]
 then
     printf "paste the telegram_bot_tokens JSON: "
@@ -18,5 +25,7 @@ cd terraform
 terraform workspace new $environment
 terraform workspace select $environment
 
-terraform apply -destroy --var "telegram_bot_tokens=$telegram_bot_tokens"
+terraform apply -destroy \
+    --var "aws_region=$aws_region" \
+    --var "telegram_bot_tokens=$telegram_bot_tokens"
 cd ..
