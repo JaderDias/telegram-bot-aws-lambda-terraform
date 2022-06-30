@@ -45,7 +45,11 @@ resource "null_resource" "upload_language" {
   }
   provisioner "local-exec" {
     working_dir = "../golang/upload"
-    command     = format("go run . '%s'", aws_s3_bucket.bucket.id)
+    command = format(
+      "go run . %s '%s'",
+      var.aws_region,
+      aws_s3_bucket.bucket.id
+    )
     interpreter = ["bash", "-c"]
   }
 }

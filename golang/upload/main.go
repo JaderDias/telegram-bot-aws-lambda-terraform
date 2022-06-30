@@ -67,15 +67,16 @@ func uploadFile(
 }
 
 func main() {
-	if len(os.Args) < 2 {
-		log.Panic("missing argument: <s3BucketId>")
+	if len(os.Args) < 3 {
+		log.Panic("missing argument: <awsRegion> <s3BucketId>")
 	}
 
-	s3BucketId := os.Args[1]
+	awsRegion := os.Args[1]
+	s3BucketId := os.Args[2]
 
 	ctx := context.Background()
 
-	cfg, err := config.LoadDefaultConfig(ctx)
+	cfg, err := config.LoadDefaultConfig(ctx, config.WithRegion(awsRegion))
 	if err != nil {
 		log.Printf("unable to load SDK config, %v", err)
 		return
