@@ -35,6 +35,7 @@ fi
 rm -rf ./bin
 mkdir ./bin
 mkdir ./bin/reply
+mkdir ./bin/send
 mkdir ./bin/upload
 cp *.csv ./bin/upload/
 
@@ -46,6 +47,15 @@ env GOOS=linux GOARCH=amd64 go build -o ../../bin/reply/reply
 if [ $? -ne 0 ]
 then
     echo "build reply packages failed"
+    exit 1
+fi
+
+cd ../send
+go get
+env GOOS=linux GOARCH=amd64 go build -o ../../bin/send/send
+if [ $? -ne 0 ]
+then
+    echo "build send packages failed"
     exit 1
 fi
 

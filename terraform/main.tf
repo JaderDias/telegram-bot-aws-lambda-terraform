@@ -15,28 +15,6 @@ resource "random_pet" "this" {
   length = 2
 }
 
-resource "aws_ssm_parameter" "telegram_bot_tokens" {
-  name  = "${terraform.workspace}_telegram_bot_tokens"
-  type  = "SecureString"
-  value = var.telegram_bot_tokens
-  tags = {
-    environment = terraform.workspace,
-    deployment  = random_pet.this.id,
-  }
-}
-
-resource "aws_s3_bucket" "bucket" {
-  bucket = "${terraform.workspace}-telegram-bot-${random_pet.this.id}"
-  tags = {
-    environment = terraform.workspace
-  }
-}
-
-resource "aws_s3_bucket_acl" "bucket_acl" {
-  bucket = aws_s3_bucket.bucket.id
-  acl    = "private"
-}
-
 resource "null_resource" "upload_language" {
   triggers = {
     aws_s3_bucket = aws_s3_bucket.bucket.id
@@ -54,14 +32,17 @@ resource "null_resource" "upload_language" {
   }
 }
 
-#module "send_message_function" {
-#  source = "./modules/function"
-
-#  function_name       = "send_message_function-${random_pet.this.id}"
-#  lambda_handler      = "send_message"
-#  source_dir          = "../bin/send_message"
-#  schedule_expression = "rate(60 minutes)"
-#}
+module "send_function" {
+  source              = "./modules/function"
+  function_name       = "${terraform.workspace}_send_${random_pet.this.id}"
+  lambda_handler      = "send"
+  source_dir          = "../bin/send"
+  schedule_expression = "rate(60 minutes)"
+  s3_bucket_arn       = aws_s3_bucket.bucket.arn
+  s3_bucket_id        = aws_s3_bucket.bucket.id
+  ssm_parameter_arn   = aws_ssm_parameter.telegram_bot_tokens.arn
+  ssm_parameter_name  = aws_ssm_parameter.telegram_bot_tokens.name
+}
 
 module "reply_function" {
   for_each = jsondecode(nonsensitive(var.telegram_bot_tokens))

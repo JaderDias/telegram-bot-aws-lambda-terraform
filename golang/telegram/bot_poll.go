@@ -77,20 +77,43 @@ func BotSendPoll(
 	chatID int64,
 	tokenParameterName string,
 ) (*Chat, error) {
-	batchId := -1
 	correctWordId := -1
-	correctLineNumber := -1
 	thisChat, err := GetChat(ctx, s3Client, s3BucketId, chatID)
 	if err == nil {
 		if language, ok := thisChat.Languages[languageCode]; ok {
-			if len(language.WrongAnswers) > 0 {
-				correctWordId = extractWordId(language.WrongAnswers)
-			} else if len(language.RightAnswers) > 0 && rand.Float32() > .5 {
-				correctWordId = extractWordId(language.RightAnswers)
-			}
+			correctWordId = GetCorrectWordId(language)
 		}
 	}
+	err = BotSendPollWithCorrectWordId(ctx, cfg, s3Client, s3BucketId, languageCode, chatID, tokenParameterName, correctWordId)
+	return thisChat, err
+}
 
+func GetCorrectWordId(
+	language Language,
+) int {
+	if len(language.WrongAnswers) > 0 {
+		return extractWordId(language.WrongAnswers)
+	}
+
+	if len(language.RightAnswers) > 0 && rand.Float32() > .5 {
+		return extractWordId(language.RightAnswers)
+	}
+
+	return -1
+}
+
+func BotSendPollWithCorrectWordId(
+	ctx context.Context,
+	cfg aws.Config,
+	s3Client *s3.Client,
+	s3BucketId string,
+	languageCode string,
+	chatID int64,
+	tokenParameterName string,
+	correctWordId int,
+) error {
+	batchId := -1
+	correctLineNumber := -1
 	if correctWordId != -1 {
 		log.Printf("correctWordId %d batchId = %d\n", correctWordId, batchId)
 		batchId = int(correctWordId / 100)
@@ -99,7 +122,7 @@ func BotSendPoll(
 	dictionary, batchId, err := GetWords(ctx, s3Client, s3BucketId, languageCode, batchId)
 	if err != nil {
 		log.Printf("Error while getting words: %s", err)
-		return thisChat, err
+		return err
 	}
 
 	correctLineNumber, sendPollConfig := getSendPollConfig(dictionary, correctLineNumber)
@@ -110,19 +133,19 @@ func BotSendPoll(
 	telegramBotTokens, err := GetTokens(ctx, cfg, tokenParameterName)
 	if err != nil {
 		log.Printf("unable to get telegram bot tokens, %v", err)
-		return thisChat, err
+		return err
 	}
 
 	bot, err := GetBot(telegramBotTokens, languageCode)
 	if err != nil {
 		log.Printf("Error while creating bot: %s", err)
-		return thisChat, err
+		return err
 	}
 
 	poll, err := bot.Send(sendPollConfig)
 	if err != nil {
 		log.Printf("Error while sending poll: %s", err)
-		return thisChat, err
+		return err
 	}
 
 	err = PutPoll(
@@ -139,8 +162,8 @@ func BotSendPoll(
 	)
 	if err != nil {
 		log.Printf("Error while saving poll: %s", err)
-		return thisChat, err
+		return err
 	}
 
-	return thisChat, nil
+	return nil
 }

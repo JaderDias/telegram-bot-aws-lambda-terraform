@@ -50,6 +50,15 @@ func GetChat(
 	chatId int64,
 ) (*Chat, error) {
 	key := fmt.Sprintf("chat/%d", chatId)
+	return GetChatFromKey(ctx, s3Client, s3BucketId, key)
+}
+
+func GetChatFromKey(
+	ctx context.Context,
+	s3Client S3Client,
+	s3BucketId string,
+	key string,
+) (*Chat, error) {
 	content, err := GetObject(ctx, s3Client, s3BucketId, key)
 	if err != nil {
 		return nil, err

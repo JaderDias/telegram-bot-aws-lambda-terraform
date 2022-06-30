@@ -32,6 +32,7 @@ data "aws_iam_policy_document" "lambda_exec_role_policy" {
     actions = [
       "s3:GetObject",
       "s3:PutObject",
+      "s3:ListBucket",
     ]
     effect = "Allow"
     resources = [

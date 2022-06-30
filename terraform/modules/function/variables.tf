@@ -5,7 +5,8 @@ variable "lambda_handler" {
   type = string
 }
 variable "language" {
-  type = string
+  type    = string
+  default = null
 }
 variable "source_dir" {
   type = string
